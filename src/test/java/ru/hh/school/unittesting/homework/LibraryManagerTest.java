@@ -13,7 +13,7 @@ import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.verifyNoInteractions;
 
 @ExtendWith(MockitoExtension.class)
-public class LibraryManagerTest {
+class LibraryManagerTest {
 
   @Mock
   private NotificationService notificationService;
@@ -39,8 +39,8 @@ public class LibraryManagerTest {
       "availBookId4, 0",
   })
   void testGetAvailableCopies(
-      String  bookId,
-      int     expectedAvailableCopies
+      String bookId,
+      int expectedAvailableCopies
   ) {
     int availableCopies = libraryManager.getAvailableCopies(bookId);
 
@@ -49,33 +49,33 @@ public class LibraryManagerTest {
 
   @Test
   void borrowBookShouldReturnFalseAndSendOneNotifyIfUserNonActive() {
-    String  readerNonActive = "readerNonActive";
-    String  checkBorrowBookId = "availBookId1";
+    String readerNonActive = "readerNonActive";
+    String checkBorrowBookId = "availBookId1";
 
     when(userService.isUserActive(readerNonActive)).thenReturn(false);
-    int     availableCopies  = libraryManager.getAvailableCopies(checkBorrowBookId);
+
+    int availableCopies = libraryManager.getAvailableCopies(checkBorrowBookId);
     boolean borrowBookResult = libraryManager.borrowBook(checkBorrowBookId, readerNonActive);
-    int     expectedAvailableCopies  = libraryManager.getAvailableCopies(checkBorrowBookId);
+    int availableCopiesAfterBorrowing = libraryManager.getAvailableCopies(checkBorrowBookId);
 
-    assertFalse(borrowBookResult);
-    assertEquals(expectedAvailableCopies, availableCopies);
-
-    verify(userService, times(1)).isUserActive(readerNonActive);
     verifyNoMoreInteractions(userService);
     verify(notificationService, times(1)).notifyUser(readerNonActive, "Your account is not active.");
     verifyNoMoreInteractions(notificationService);
+
+    assertFalse(borrowBookResult);
+    assertEquals(5, availableCopies);
+    assertEquals(5, availableCopiesAfterBorrowing);
   }
 
   @Test
   void borrowBookShouldReturnFalseIfNotAvailableCopies() {
-    String  readerActive = "readerActive";
-    String  checkBorrowBookId = "checkBorrowBookId";
+    String readerActive = "readerActive";
+    String checkBorrowBookId = "checkBorrowBookId";
 
     when(userService.isUserActive(readerActive)).thenReturn(true);
-    int     availableCopies  = libraryManager.getAvailableCopies(checkBorrowBookId);
+    int availableCopies = libraryManager.getAvailableCopies(checkBorrowBookId);
     boolean borrowBookResult = libraryManager.borrowBook(checkBorrowBookId, readerActive);
 
-    verify(userService, times(1)).isUserActive(readerActive);
     verifyNoMoreInteractions(userService);
     verifyNoInteractions(notificationService);
 
@@ -85,37 +85,36 @@ public class LibraryManagerTest {
 
   @Test
   void testBorrowBookSuccess() {
-    String readerActive       = "readerActive";
-    String checkBorrowBookId  = "availBookId1";
+    String readerActive = "readerActive";
+    String checkBorrowBookId = "availBookId1";
 
     when(userService.isUserActive(readerActive)).thenReturn(true);
 
-    int     availableCopies = libraryManager.getAvailableCopies(checkBorrowBookId);
-    boolean borrowBookResult  = libraryManager.borrowBook(checkBorrowBookId, readerActive);
-    int     expectedAvailableCopies = libraryManager.getAvailableCopies(checkBorrowBookId);
+    int availableCopies = libraryManager.getAvailableCopies(checkBorrowBookId);
+    boolean borrowBookResult = libraryManager.borrowBook(checkBorrowBookId, readerActive);
+    int availableCopiesAfterBorrowing = libraryManager.getAvailableCopies(checkBorrowBookId);
 
-    verify(userService, times(1)).isUserActive(readerActive);
     verifyNoMoreInteractions(userService);
-
     verify(notificationService, times(1)).notifyUser(readerActive, "You have borrowed the book: " + checkBorrowBookId);
     verifyNoMoreInteractions(notificationService);
 
     assertTrue(borrowBookResult);
-    assertEquals(expectedAvailableCopies + 1, availableCopies);
+    assertEquals(5, availableCopies);
+    assertEquals(4, availableCopiesAfterBorrowing);
   }
 
   @Test
   void testBorrowBookSameOneCopyForDifferentActiveUsers() {
-    String readerActive1      = "readerActive1";
-    String readerActive2      = "readerActive2";
-    String checkBorrowBookId  = "availBookId3";
+    String readerActive1 = "readerActive1";
+    String readerActive2 = "readerActive2";
+    String checkBorrowBookId = "availBookId3";
 
     when(userService.isUserActive(readerActive1)).thenReturn(true);
     when(userService.isUserActive(readerActive2)).thenReturn(true);
 
     boolean borrowBookResultForReader1 = libraryManager.borrowBook(checkBorrowBookId, readerActive1);
     boolean borrowBookResultForReader2 = libraryManager.borrowBook(checkBorrowBookId, readerActive2);
-    int     availableCopies            = libraryManager.getAvailableCopies(checkBorrowBookId);
+    int availableCopies = libraryManager.getAvailableCopies(checkBorrowBookId);
 
     assertTrue(borrowBookResultForReader1);
     assertFalse(borrowBookResultForReader2);
@@ -126,22 +125,23 @@ public class LibraryManagerTest {
   void returnBookShouldReturnFalseWhenBookIsNotBorrowed() {
     String checkReturnBookId = "availBookId1";
 
-    int     availableCopies = libraryManager.getAvailableCopies(checkReturnBookId);
+    int availableCopies = libraryManager.getAvailableCopies(checkReturnBookId);
     boolean returnBookResult = libraryManager.returnBook(checkReturnBookId, "readerActive1");
-    int     expectedAvailableCopies = libraryManager.getAvailableCopies(checkReturnBookId);
+    int availableCopiesAfterReturning = libraryManager.getAvailableCopies(checkReturnBookId);
 
     assertFalse(returnBookResult);
-    assertEquals(expectedAvailableCopies, availableCopies);
+    assertEquals(5, availableCopies);
+    assertEquals(5, availableCopiesAfterReturning);
   }
 
   @Test
   void returnBookShouldReturnFalseWhenBookIsBorrowedOtherUser() {
-    String readerBorrowBookActive     = "readerActive1";
-    String checkReturnBookId          = "availBookId3";
+    String readerBorrowBookActive = "readerActive1";
+    String checkReturnBookId = "availBookId3";
 
     when(userService.isUserActive(readerBorrowBookActive)).thenReturn(true);
-    libraryManager.borrowBook(checkReturnBookId, readerBorrowBookActive);
 
+    libraryManager.borrowBook(checkReturnBookId, readerBorrowBookActive);
     int availableCopies = libraryManager.getAvailableCopies(checkReturnBookId);
     boolean returnBookResult = libraryManager.returnBook(checkReturnBookId, "readerActive2");
 
@@ -151,22 +151,21 @@ public class LibraryManagerTest {
 
   @Test
   void testReturnBookSuccess() {
-    String readerBorrowBookActive     = "readerActive1";
-    String checkReturnBookId          = "availBookId2";
+    String readerBorrowBookActive = "readerActive1";
+    String checkReturnBookId = "availBookId2";
 
     when(userService.isUserActive(readerBorrowBookActive)).thenReturn(true);
+
     libraryManager.borrowBook(checkReturnBookId, readerBorrowBookActive);
-
     int availableCopies = libraryManager.getAvailableCopies(checkReturnBookId);
-
     boolean returnBookResult = libraryManager.returnBook(checkReturnBookId, readerBorrowBookActive);
-
-    int expectedAvailableCopies = libraryManager.getAvailableCopies(checkReturnBookId);
-
-    assertTrue(returnBookResult);
-    assertEquals(expectedAvailableCopies - 1, availableCopies);
+    int availableCopiesAfterReturning = libraryManager.getAvailableCopies(checkReturnBookId);
 
     verify(notificationService, times(1)).notifyUser(readerBorrowBookActive, "You have returned the book: " + checkReturnBookId);
+
+    assertTrue(returnBookResult);
+    assertEquals(2, availableCopies);
+    assertEquals(3, availableCopiesAfterReturning);
   }
 
   @Test
@@ -189,10 +188,10 @@ public class LibraryManagerTest {
       "5, true, false, 3.75",
   })
   void testCalculateDynamicLateFee(
-      int     overdueDays,
+      int overdueDays,
       boolean isBestseller,
       boolean isPremiumMember,
-      double  expectedFee
+      double expectedFee
   ) {
     double totalFee = libraryManager.calculateDynamicLateFee(overdueDays, isBestseller, isPremiumMember);
 
